@@ -1,0 +1,14 @@
+{
+    "vods": [
+        {
+            "id": "st-1234567890TEST",
+            "title": "Title 1",
+            "subtitle": "Subtitle 1",
+            "views": "27",
+            "length": "2:48",
+            "thumbnail": "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb0.jpg",
+            "created_on": "2020-06-24T07:51:32Z",
+            "playbackUrl": "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/hls/master.m3u8"
+        }
+    ]
+}

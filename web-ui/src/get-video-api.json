@@ -1,0 +1,19 @@
+{
+    "vods": [
+        {
+            "id": "st-1234567890TEST",
+            "title": "This is a test title",
+            "subtitle": "This is a test subtitle",
+            "views": "27",
+            "length": "2:48",
+            "thumbnail": "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb0.jpg",
+            "thumbnails": [
+                "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb0.jpg",
+                "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb1.jpg",
+                "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb2.jpg"
+            ],
+            "created_on": "2020-06-24T07:51:32Z",
+            "playbackUrl": "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/hls/master.m3u8"
+        }
+    ]
+}

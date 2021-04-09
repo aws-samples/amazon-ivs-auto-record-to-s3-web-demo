@@ -1,0 +1,18 @@
+.h1 {
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1.1875;
+}
+
+.h2 {
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.1875;
+}
+
+.offline {
+  font-weight: 800;
+  font-size: 1.6rem;
+  display: flex;
+  justify-content: center;
+}

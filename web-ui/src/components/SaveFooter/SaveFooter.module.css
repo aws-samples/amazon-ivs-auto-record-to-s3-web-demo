@@ -1,0 +1,27 @@
+.wrapper {
+  display: flex;
+  position: fixed;
+  bottom: 4rem;
+  width: 100%;
+  transform: translateY(0);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9;
+}
+
+.container {
+  margin: 0 auto;
+  width: 100%;
+  max-width: var(--section-max-width);
+  border-radius: var(--radius);
+  background: var(--color-bg-inverted);
+  box-shadow: 0rem 0.5rem 1rem var(--color-black-10);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.2rem 1.2rem 1.6rem;
+}
+
+.hidden {
+  transform: translateY(20rem);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}

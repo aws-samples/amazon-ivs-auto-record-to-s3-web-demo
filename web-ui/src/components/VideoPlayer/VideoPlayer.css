@@ -1,0 +1,32 @@
+/* Variable Overrides */
+:root {
+  --video-width: 88.4rem;
+}
+
+/* Align the quality menu to right side of video container */
+.video-js .vjs-menu-button-popup .vjs-menu {
+  left: auto;
+  right: 0;
+}
+
+.video-js .vjs-tech {
+  outline: none;
+}
+
+.video-js .vjs-control-bar {
+  border-radius: 0 0 5px 5px;
+}
+
+@media (max-width: 480px) {
+  /* Smaller Screens */
+  :root {
+    --video-width: 100%;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1280px) {
+  /* Large Screens */
+  :root {
+    --video-width: 64rem;
+  }
+}

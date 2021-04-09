@@ -1,0 +1,25 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link {
+  color: var(--color-text-base);
+  display: inline-block;
+  padding: 0 1rem;
+  margin-left: -1rem;
+  line-height: var(--header-height);
+}
+
+.link:visited {
+  color: var(--color-text-base);
+}
+
+.link:hover {
+  background: var(--color-bg-alt);
+}
+
+.adminActive {
+  display: none;
+}

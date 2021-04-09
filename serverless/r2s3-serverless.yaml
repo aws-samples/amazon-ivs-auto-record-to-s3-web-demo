@@ -1,0 +1,867 @@
+Description: IVS Record to S3
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: S3
+        Parameters:
+          - DependenciesBucketName
+      - Label:
+          default: IVS
+        Parameters:
+          - IvsChannelName
+          - Title
+          - Description
+      - Label:
+          default: API Gateway
+        Parameters:
+          - StageName
+Outputs:
+  ApiGatewayStageUrl:
+    Description: The URL to invoke the API Gateway.
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+  IvsChannelArn:
+    Description: This is the ARN of the IVS channel.
+    Value: !Ref 'IVSChannel'
+  IvsChannelIngestEndpointOutput:
+    Description: Channel ingest endpoint, part of the definition of an ingest server,
+      used when you set up streaming software.
+    Value: !Sub
+      - rtmps://${Endpoint}/app
+      - Endpoint: !GetAtt 'IVSChannel.IngestEndpoint'
+  IvsChannelPlaybackUrlOutput:
+    Description: This is the channel playback URL.
+    Value: !GetAtt 'IVSChannel.PlaybackUrl'
+  IvsStorageBucketName:
+    Description: This is the name of the buckets where IVS will store your videos.
+    Value: !Ref 'IvsStorageBucket'
+  IvsStreamKey:
+    Description: Use this stream key to initiate a live stream. DO NOT store your
+      keys as stack outputs on a production environment.
+    Value: !GetAtt 'IVSStreamKey.Value'
+  IvsStreamKeyArn:
+    Description: The ARN of the Amazon IVS stream key associated with the channel.
+    Value: !Ref 'IVSStreamKey'
+Parameters:
+  DependenciesBucketName:
+    Description: The name of the S3 Bucket that will hold the source code of the api
+      and custom lambdas.
+    MinLength: 1
+    Type: String
+  Description:
+    Default: Subtitle
+    Description: The subtitle of the live broadcasting.
+    MinLength: 1
+    Type: String
+  IvsChannelName:
+    Default: IVS-Channel
+    Description: The name of the IVS Channel.
+    Type: String
+  StageName:
+    Default: api
+    Description: A name for the stage that API Gateway creates with this deployment.
+      Use only alphanumeric characters.
+    MinLength: 1
+    Type: String
+  Title:
+    Default: Title
+    Description: The title of the live broadcasting.
+    MinLength: 1
+    Type: String
+Resources:
+  ApiGateway:
+    Properties:
+      Cors:
+        AllowMethods: '''GET,POST,PUT,OPTIONS'''
+        AllowOrigin: '''*'''
+      StageName: !Ref 'StageName'
+    Type: AWS::Serverless::Api
+  CheckLiveCronLambda:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Handler: index.isLiveCron
+      Role: !GetAtt 'CheckLiveCronLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  CheckLiveCronLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:ListStreams
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ivs:${AWS::Region}:${AWS::AccountId}:channel/*'
+            Version: '2012-10-17'
+          PolicyName: ivs-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:ListTables
+                  - dynamodb:Scan
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  CloudFrontBucketPolicy:
+    DependsOn:
+      - CloudFrontOriginAccessIdentity
+    Properties:
+      Bucket: !Ref 'IvsStorageBucket'
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetObject
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:${AWS::Partition}:iam::cloudfront:user/CloudFront Origin Access
+                  Identity ${Identity}
+                - Identity: !Ref 'CloudFrontOriginAccessIdentity'
+            Resource:
+              - !Sub
+                - ${BucketArn}/*
+                - BucketArn: !GetAtt 'IvsStorageBucket.Arn'
+    Type: AWS::S3::BucketPolicy
+  CloudFrontDistribution:
+    DependsOn:
+      - CloudFrontOriginAccessIdentity
+    Properties:
+      DistributionConfig:
+        Comment: IVS Storage CloudFront Distribution
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            Headers:
+              - Access-Control-Request-Headers
+              - Access-Control-Request-Method
+            QueryString: 'false'
+          TargetOriginId: IVS Storage Origin
+          ViewerProtocolPolicy: allow-all
+        Enabled: 'true'
+        Origins:
+          - DomainName: !GetAtt 'IvsStorageBucket.DomainName'
+            Id: IVS Storage Origin
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub
+                - origin-access-identity/cloudfront/${OriginAccessId}
+                - OriginAccessId: !Ref 'CloudFrontOriginAccessIdentity'
+    Type: AWS::CloudFront::Distribution
+  CloudFrontOriginAccessIdentity:
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: CF Identity - IVS Storage Bucket
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  CreateChannelLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:GetChannel
+                  - ivs:GetStream
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSChannel'
+              - Action:
+                  - ivs:CreateChannel
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ivs:${AWS::Region}:${AWS::AccountId}:*'
+              - Action:
+                  - ivs:GetStreamKey
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSStreamKey'
+            Version: '2012-10-17'
+          PolicyName: ivs-streamkey-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  DeleteVideo:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          VIDEOS_TABLE_NAME: !Ref 'IVSVideoTable'
+      Events:
+        DeleteResource:
+          Properties:
+            Method: delete
+            Path: /video/{id}
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.deleteRecordedVideo
+      Role: !GetAtt 'DeleteVideoLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  DeleteVideoLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSVideoTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  GetLive:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /live
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.getLiveChannels
+      Policies: AmazonDynamoDBReadOnlyAccess
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  GetLiveDetails:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /live-details
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.getLiveChannelDetails
+      Role: !GetAtt 'GetLiveDetailsLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  GetLiveDetailsLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:ListStreamsKeys
+                  - ivs:GetChannel
+                  - ivs:GetStream
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSChannel'
+              - Action:
+                  - ivs:GetStreamKey
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ivs:${AWS::Region}:${AWS::AccountId}:stream-key/*'
+            Version: '2012-10-17'
+          PolicyName: ivs-streamkey-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  GetVideo:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          VIDEOS_TABLE_NAME: !Ref 'IVSVideoTable'
+      Events:
+        PutResource:
+          Properties:
+            Method: get
+            Path: /video/{id}
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.getVideos
+      Policies:
+        - DynamoDBReadPolicy
+      Role: !GetAtt 'GetVideoLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  GetVideoLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:ListStreams
+                  - ivs:GetStream
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSChannel'
+            Version: '2012-10-17'
+          PolicyName: ivs-streamkey-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSVideoTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  GetVideos:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+          VIDEOS_TABLE_NAME: !Ref 'IVSVideoTable'
+      Events:
+        GetResource:
+          Properties:
+            Method: get
+            Path: /videos
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.getVideos
+      Role: !GetAtt 'GetVideosLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  GetVideosLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:ListStreams
+                  - ivs:GetStream
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSChannel'
+            Version: '2012-10-17'
+          PolicyName: ivs-streamkey-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSVideoTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  IVSChannel:
+    Properties:
+      Name: !Ref 'IvsChannelName'
+    Type: AWS::IVS::Channel
+  IVSChannelRule:
+    Properties:
+      Description: Rule to monitor IVS streams.
+      EventPattern:
+        detail-type:
+          - IVS Stream State Change
+        resources:
+          - !Ref 'IVSChannel'
+        source:
+          - aws.ivs
+      Targets:
+        - Arn: !GetAtt 'IVSStreamingStateChangeLambda.Arn'
+          Id: IVS-channel-streaming-state-change
+    Type: AWS::Events::Rule
+  IVSChannelTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: IVS-Channel
+    Type: AWS::DynamoDB::Table
+  IVSRecordingConfigurationRule:
+    Properties:
+      Description: Rule to monitor IVS Recordings.
+      EventPattern:
+        detail-type:
+          - IVS Recording State Change
+        source:
+          - aws.ivs
+      Targets:
+        - Arn: !GetAtt 'IVSStreamingStateChangeLambda.Arn'
+          Id: IVS-channel-recording-state-change
+    Type: AWS::Events::Rule
+  IVSRecordingStateChangeLambdaInvokePermission:
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !Ref 'IVSStreamingStateChangeLambda'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt 'IVSRecordingConfigurationRule.Arn'
+    Type: AWS::Lambda::Permission
+  IVSStreamKey:
+    Properties:
+      ChannelArn: !Ref 'IVSChannel'
+    Type: AWS::IVS::StreamKey
+  IVSStreamingStateChangeLambda:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+          STORAGE_URL: !Sub
+            - https://${CloudFrontDomainName}
+            - CloudFrontDomainName: !GetAtt 'CloudFrontDistribution.DomainName'
+          VIDEOS_TABLE_NAME: !Ref 'IVSVideoTable'
+      Handler: index.customEventFromEventBridge
+      Role: !GetAtt 'IvsStreamingStateChangeLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  IVSStreamingStateChangeLambdaInvokePermission:
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !Ref 'IVSStreamingStateChangeLambda'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt 'IVSChannelRule.Arn'
+    Type: AWS::Lambda::Permission
+  IVSVideoTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: IVS-Video
+    Type: AWS::DynamoDB::Table
+  IvsLiveCheckRule:
+    Properties:
+      Description: CloudWatch rule to invoke the IVS Live Check lambda.
+      ScheduleExpression: cron(0/1 * * * ? *)
+      Targets:
+        - Arn: !GetAtt 'CheckLiveCronLambda.Arn'
+          Id: invoke-live-check-lambda
+    Type: AWS::Events::Rule
+  IvsStorageBucket:
+    DependsOn:
+      - CloudFrontOriginAccessIdentity
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - Access-Control-Allow-Origin
+            AllowedMethods:
+              - GET
+            AllowedOrigins:
+              - '*'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: 'true'
+        BlockPublicPolicy: 'true'
+        IgnorePublicAcls: 'true'
+        RestrictPublicBuckets: 'true'
+    Type: AWS::S3::Bucket
+  IvsStreamingStateChangeLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:PutItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSVideoTable}'
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  LiveCheckLambdaInvokePermission:
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !Ref 'CheckLiveCronLambda'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt 'IvsLiveCheckRule.Arn'
+    Type: AWS::Lambda::Permission
+  LoadChannelInfoCustom:
+    DependsOn:
+      - IVSChannel
+      - IVSStreamKey
+      - IVSChannelTable
+    Properties:
+      ChannelArn: !Ref 'IVSChannel'
+      Id: !Sub '${IVSChannelTable}'
+      IngestServer: !GetAtt 'IVSChannel.IngestEndpoint'
+      PlaybackUrl: !GetAtt 'IVSChannel.PlaybackUrl'
+      ServiceToken: !GetAtt 'LoadChannelInfoLambda.Arn'
+      StreamArn: !Ref 'IVSStreamKey'
+      StreamKey: !GetAtt 'IVSStreamKey.Value'
+      Subtitle: !Ref 'Description'
+      Title: !Ref 'Title'
+    Type: Custom::LoadChannelInfo
+  LoadChannelInfoLambda:
+    Properties:
+      Code:
+        ZipFile: !Join
+          - ''
+          - - "const cfnResp = require(\"cfn-response\");\n"
+            - "const AWS = require(\"aws-sdk\");\n"
+            - "\n"
+            - "const ddb = new AWS.DynamoDB();\n"
+            - "\n"
+            - "exports.handler = async (event, context) => {\n"
+            - "    console.log(\"=========== event ===================\");\n"
+            - "    console.log(JSON.stringify(event));\n"
+            - "    console.log(\"=========== context ===================\");\n"
+            - "    console.log(JSON.stringify(context));\n"
+            - "\n"
+            - "    if (event.RequestType != \"Create\") {\n"
+            - "        return response(event, context, cfnResp.SUCCESS, {});\n"
+            - "    }\n"
+            - "\n"
+            - "    try{\n"
+            - "\n"
+            - "        let payload = {\n"
+            - "            id : event.ResourceProperties.Id,\n"
+            - "            channelArn : event.ResourceProperties.ChannelArn,\n"
+            - "            title : event.ResourceProperties.Title,\n"
+            - "            subtitle : event.ResourceProperties.Subtitle,\n"
+            - "            ingestServer : event.ResourceProperties.IngestServer,\n"
+            - "            playbackUrl : event.ResourceProperties.PlaybackUrl,\n"
+            - "            streamKey : event.ResourceProperties.StreamKey,\n"
+            - "            streamArn : event.ResourceProperties.StreamArn\n"
+            - "          };\n"
+            - "          \n"
+            - "        \n"
+            - "        const result = await _createDdbChannel(payload, process.env.CHANNELS_TABLE_NAME);\n"
+            - "        \n"
+            - "        console.info(\"loadChannelInfo > createDdbChannel : \", JSON.stringify(result,\
+              \ null, 2));\n"
+            - "\n"
+            - "        return response(event, context, cfnResp.SUCCESS, {});\n"
+            - "\n"
+            - "        \n"
+            - "    }catch(err){\n"
+            - "        console.log(`Error: ${err}`);\n"
+            - "        return response(event, context, cfnResp.FAILED, {});\n"
+            - "    }\n"
+            - "\n"
+            - "\n"
+            - "\n"
+            - "};\n"
+            - "\n"
+            - "const _createDdbChannel = async (payload, table) => {\n"
+            - "    const params = {\n"
+            - "        TableName: table,\n"
+            - "        Item: {\n"
+            - "            'Id': { S: payload.id },\n"
+            - "            'ChannelArn': { S: payload.channelArn },\n"
+            - "            'IngestServer': { S: payload.ingestServer },\n"
+            - "            'PlaybackUrl': { S: payload.playbackUrl },\n"
+            - "            'Title': { S: payload.title },\n"
+            - "            'Subtitle': { S: payload.subtitle },\n"
+            - "            'StreamKey': { S: payload.streamKey },\n"
+            - "            'StreamArn': { S: payload.streamArn },\n"
+            - "            'IsLive': { BOOL: false }\n"
+            - "        }\n"
+            - "    };\n"
+            - "    \n"
+            - "    const result = await ddb.putItem(params).promise();\n"
+            - "\n"
+            - "    console.info(\"_createDdbChannel > result:\", result);\n"
+            - "\n"
+            - "    return result;\n"
+            - "  \n"
+            - "  };\n"
+            - "\n"
+            - "  function response(event, context, status, responseData) {\n"
+            - "    return new Promise(() => cfnResp.send(event, context, status,\n"
+            - "        responseData ? responseData : {}, event.LogicalResourceId));\n"
+            - "}\n"
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Handler: index.handler
+      Role: !GetAtt 'LoadChannelInfoLambdaRole.Arn'
+      Runtime: nodejs12.x
+    Type: AWS::Lambda::Function
+  LoadChannelInfoLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:PutItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  PutLive:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Events:
+        PutResource:
+          Properties:
+            Method: put
+            Path: /live
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.putLiveChannel
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  PutResetKey:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          CHANNELS_TABLE_NAME: !Ref 'IVSChannelTable'
+          REGION: !Ref 'AWS::Region'
+      Events:
+        PutResource:
+          Properties:
+            Method: put
+            Path: /reset-key
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.resetStreamKey
+      Role: !GetAtt 'ResetKeyLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  PutVideo:
+    Properties:
+      CodeUri:
+        Bucket: !Ref 'DependenciesBucketName'
+        Key: api_backend.zip
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          VIDEOS_TABLE_NAME: !Ref 'IVSVideoTable'
+      Events:
+        PutResource:
+          Properties:
+            Method: put
+            Path: /video/{id}
+            RestApiId: !Ref 'ApiGateway'
+          Type: Api
+      Handler: index.putVideo
+      Role: !GetAtt 'PutVideoLambdaRole.Arn'
+      Runtime: nodejs14.x
+    Type: AWS::Serverless::Function
+  PutVideoLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:UpdateItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSVideoTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+  ResetKeyLambdaRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ivs:StopStream
+                  - ivs:CreateStreamKey
+                Effect: Allow
+                Resource:
+                  - !Ref 'IVSChannel'
+              - Action:
+                  - ivs:CreateStreamKey
+                  - ivs:DeleteStreamKey
+                  - ivs:GetStreamKey
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ivs:${AWS::Region}:${AWS::AccountId}:stream-key/*'
+              - Action:
+                  - ivs:CreateStreamKey
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ivs:${AWS::Region}:${AWS::AccountId}:*'
+            Version: '2012-10-17'
+          PolicyName: ivs-streamkey-access
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IVSChannelTable}'
+            Version: '2012-10-17'
+          PolicyName: dynamodb-access
+    Type: AWS::IAM::Role
+Transform: AWS::Serverless-2016-10-31

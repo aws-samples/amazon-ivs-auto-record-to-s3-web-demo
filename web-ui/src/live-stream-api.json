@@ -1,0 +1,12 @@
+{
+    "data":
+        {
+            "id": "st-1234567891TEST",
+            "title": "A day in Seattle",
+            "subtitle": "Looping footage of Seattle, WA",
+            "thumbnail": "https://d39ii5l128t5ul.cloudfront.net/assets/R2S3/media/thumbnails/thumb0.jpg",
+            "isLive": "Yes",
+            "viewers": 8,
+            "playbackUrl": "https://fcc3ddae59ed.us-west-2.playback.live-video.net/api/video/v1/us-west-2.893648527354.channel.DmumNckWFTqz.m3u8"
+        }
+}

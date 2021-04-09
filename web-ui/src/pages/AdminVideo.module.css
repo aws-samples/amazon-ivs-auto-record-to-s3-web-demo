@@ -1,0 +1,42 @@
+.thumbnailRadio {
+  display: none;
+}
+
+.thumbnailRadioImage {
+  width: 100%;
+  height: auto;
+}
+
+.thumbnailRadioImage:hover {
+  cursor: pointer;
+}
+
+.thumbnailSelectors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-gap: 1rem;
+}
+
+.thumbnailRadio + label {
+  display: block;
+  border-radius: var(--radius-small);
+  border: 2px solid transparent;
+  overflow: hidden;
+}
+
+.thumbnailRadio:checked + label {
+  border: 2px solid var(--color-text-primary);
+  box-shadow: inset 0 0 2px var(--color-bg-base);
+}
+
+.field {
+  border-color: darkgrey;
+  border-width: 1;
+  border-radius: 8px;
+  transition: 0.3s all;
+}
+
+.field:hover {
+  background-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.05);
+}
