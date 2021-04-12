@@ -6,7 +6,7 @@ This demo web application is an educational tool to show how to use the **Auto-r
 
 **This project is intended for education purposes only and not for production usage.**
 
-This is a serverless web application, leveraging [Amazon IVS](https://aws.amazon.com/ivs/), [AWS Lambda](https://aws.amazon.com/lambda/), [API Gateway](https://aws.amazon.com/api-gateway/), [DynamoDB](https://aws.amazon.com/dynamodb/), [Amazon S3](https://aws.amazon.com/s3/), and [Amazon Cloudfront](https://aws.amazon.com/cloudfront/).
+This is a serverless web application, leveraging [Amazon IVS](https://aws.amazon.com/ivs/), [AWS Lambda](https://aws.amazon.com/lambda/), [API Gateway](https://aws.amazon.com/api-gateway/), [DynamoDB](https://aws.amazon.com/dynamodb/), [Amazon S3](https://aws.amazon.com/s3/), and [Amazon CloudFront](https://aws.amazon.com/cloudfront/).
 
 ## Getting Started
 
@@ -61,7 +61,7 @@ After the serverless installation is complete, follow the instructions in the **
 
 ## Known Issues
 * The Amazon IVS channel used in this demo must be named `IVS-Channel`.
-* Because of the distributed nature of Amazon Cloudfront, you may get 403 or 404 errors if you try to use this application before CloudFront has completed its propagation to all EDGE locations. This may take up to a few hours.
+* Because of the distributed nature of Amazon CloudFront, you may get 403 or 404 errors if you try to use this application before CloudFront has completed its propagation to all EDGE locations. This may take up to a few hours.
 * The application was written for demonstration purposes and not for production use.
 * Currently only tested in the us-west-2 (Oregon) region. Additional regions may be supported depending on service availability.
 
