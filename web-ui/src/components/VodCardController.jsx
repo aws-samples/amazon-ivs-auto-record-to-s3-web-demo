@@ -2,7 +2,15 @@ import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import VodCard from "./VodCard/VodCard";
 import API from "../get-video-api";
+import FormatTimestamp from "../utility/FormatTimestamp";
 import * as config from "../config";
+
+function sortByKey(array, key) {
+  return array.sort(function(a, b) {
+    var x = a[key]; var y = b[key];
+    return ((x > y) ? -1 : ((x < y) ? 1 : 0));
+  });
+}
 
 function VodCardController(props) {
   const [response, setResponse] = useState({});
@@ -19,7 +27,8 @@ function VodCardController(props) {
       fetch(getVideosUrl)
       .then(response => response.json())
       .then((res) => {
-        setResponse(res.vods);
+        const sortedVods = sortByKey(res.vods, "created_on")
+        setResponse(sortedVods);
       })
       .catch((error) => {
         console.error(error);
@@ -51,7 +60,8 @@ function VodCardController(props) {
   // Format Thumbnail, title, subtitle, hint into array of objects
   for (let index = 0; index < response.length; index++) {
     const vod = response[index];
-    const hintMeta = `${vod.views} views • ${vod.length}`;
+    const time = FormatTimestamp(vod.length);
+    const hintMeta = `${vod.views} views • ${time}`;
     formattedAPIResponse.push({
       id: vod.id,
       title: vod.title,

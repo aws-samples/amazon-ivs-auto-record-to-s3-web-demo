@@ -4,6 +4,7 @@ import styles from "./Home.module.css";
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import FormatTimestamp from "../utility/FormatTimestamp";
 import API from "../get-video-api";
 
 import * as config from "../config";
@@ -120,7 +121,7 @@ function Video() {
             playbackUrl={response.playbackUrl}
             subtitle={response.subtitle}
             views={videoViews}
-            length={response.length}
+            length={FormatTimestamp(response.length)}
             onPlay={handleOnPlay}
           />
         ) : (
