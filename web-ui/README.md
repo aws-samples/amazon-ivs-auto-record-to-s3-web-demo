@@ -5,7 +5,7 @@ The client app for this demo is built with React.js and is modifiable to suit yo
 ## Prerequisites
 
 ### 1. Set up serverless backend
-Before you run the client application, you must finish setting up the [serverless backend](../serverless). See [Step 4](../serverless#4-take-note-of-the-stack-output) of the serverless readme for full instructions.
+Before you run the client application, you must finish setting up the [serverless backend](../serverless). See [Step 4](../serverless#4-take-note-of-the-stack-outputs) of the serverless readme for full instructions.
 
 Once you have this value, you'll' need to modify `web-ui/src/config.js` to support your installation. Replace the value from this line with the **ApiGatewayStageUrl** you copied from the stack outputs of the serverless setup.
 
