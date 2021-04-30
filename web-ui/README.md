@@ -1,40 +1,28 @@
 # Amazon IVS Auto-record to S3 demo web-ui installation instructions
 
-The client app for this demo is built with React.js and is modifiable to suit your implementation needs. This file contains the instructions for setting up your development environment to work with the [serverless backend](https://github.com/aws-samples/amazon-ivs-auto-record-to-s3-web-demo/tree/main/serverless).
+The client app for this demo is built with React.js and is modifiable to suit your implementation needs. This file contains the instructions for setting up your development environment to work with the [serverless backend](../serverless).
 
 ## Prerequisites
 
-You will need the following assets and software installations in place to support your development work.
+### 1. Set up serverless backend
+Before you run the client application, you must finish setting up the [serverless backend](../serverless). See [Step 4](../serverless#4-take-note-of-the-stack-output) of the serverless readme for full instructions.
 
-### Software Repository
+Once you have this value, you'll' need to modify `web-ui/src/config.js` to support your installation. Replace the value from this line with the **ApiGatewayStageUrl** you copied from the stack outputs of the serverless setup.
 
-We recommend using GitHub's Clone menu to clone the IVS R2S3 GitHub repository for a reliable, version-controlled source. You can also use the Clone menu to download the repository for hosting in your preferred source control system.
+```
+export const API_URL = "https://<api-gateway-id>.execute-api.<region>.amazonaws.com/<stage-name>"
+```
 
-GitHub uses the Git software for distributed version control. You can download Git and view installation and usage instructions at the <a href="https://git-scm.com/" target="_blank">Git-scm.com</a> website.
+**Important CloudFront information:**
+Given the distributed nature of the CloudFront distribution used in the serverless backend, you may get 404 errors if you try to use it before CloudFront has completed its propagation to all EDGE locations. If you are experiencing errors with the application, wait a least an hour before you try to use the web-ui client on a new stack.
 
-### Serverless Installation on an AWS Account
-
-You will need the **ApiGatewayStageUrl** from the Cloudformation stack you created. (If you don't have this, please refer to the (serverless readme)[../serverless] for installation instructions.)
-
-You can get the **ApiGatewayStageUrl** value from the Outputs section of the Cloudformation stack you created with the serverless infrastructure. Use the CloudFormation console to view this information, or with the AWS CLI tool/AWS Cloudshell using the following command: `aws cloudformation describe-stacks --stack-name "Stackname" --profile "Profilename"`. See (Step 4)[https://github.com/aws-samples/amazon-ivs-auto-record-to-s3-web-demo/tree/main/serverless#4-take-a-note-of-the-outputs-of-the-cloudformation-stack] of the installation instructions in the serverless README.md file for full instructions.
-
-Once you have this value, you will need to modify **web-ui/src/config.js** to support your installation. Replace the value from this line:
-
-`export const API_URL = "https://<api-gateway-id>.execute-api.<region>.amazonaws.com/<stage-name>"`
-
-with the stage URL you copied from your stack output section.
-
-### A Note on CloudFront
-
-Given the distributed nature of the CloudFront distribution in the serverless IVS R2S3 infrastructure, make sure you wait a least an hour before you try to use the web-ui client on a new stack. You may get 404 errors if you try to use it before CloudFront has completed its propagation to all EDGE locations.
-
-### Node.JS Server Environment
+### 2. Install nodejs
 
 Install the LTS version of the [NodeJS](https://nodejs.org/) server environment into your development environment.
 
-### Yarn Package Manager
+### 3. Install the Yarn package manager
 
-Install the [Yarn Package Manager](https://yarnpkg.com/) into your development environment by executing the command below:
+Install the [Yarn package manager](https://yarnpkg.com/) into your development environment by executing the following command:
 
 ```console
 npm i yarn
