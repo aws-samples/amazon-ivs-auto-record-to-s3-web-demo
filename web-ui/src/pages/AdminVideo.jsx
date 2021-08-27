@@ -208,7 +208,7 @@ function AdminVideo() {
                 placeholder="Subtitle"
                 value={videoSubtitle}
                 onChange={handleOnChange}
-                  onKeyPress={handleKeyPress}
+                onKeyPress={handleKeyPress}
               ></input>
             </fieldset>
           </section>
