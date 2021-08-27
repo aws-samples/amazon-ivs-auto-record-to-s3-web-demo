@@ -110,12 +110,7 @@ function AdminVideo() {
 
     // Set mounted to false when the component is unmounted
     return () => { mounted = false };
-  });
-
-  useEffect(() => {
-    // Hide the preview
-    setShowPreview(false);
-  }, [setShowPreview]);
+  }, []);
 
   const handleOnChange = (e) => {
     setFormChanged(true);
@@ -146,7 +141,7 @@ function AdminVideo() {
 
     if (config.USE_MOCK_DATA && config.USE_MOCK_DATA === true) {
       putAPI(payload);
-    }else {
+    } else {
       const putVideoUrl = `${config.API_URL}/video/${id}`;
       fetch(putVideoUrl, {
         method: 'PUT',
@@ -213,7 +208,7 @@ function AdminVideo() {
                 placeholder="Subtitle"
                 value={videoSubtitle}
                 onChange={handleOnChange}
-                onKeyPress={handleKeyPress}
+                  onKeyPress={handleKeyPress}
               ></input>
             </fieldset>
           </section>
