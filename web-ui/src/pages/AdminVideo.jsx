@@ -26,6 +26,14 @@ function NotFoundError() {
 }
 
 function ThumbnailRadio(props) {
+
+  const [imgError, setImageError] = useState(false);
+
+  if(imgError) {
+    return (
+      <span></span>
+    )
+  }
   return (
     <>
       <input
@@ -38,11 +46,12 @@ function ThumbnailRadio(props) {
         onChange={props.onChange}
       />
       <label htmlFor={props.id}>
-        <img
-          alt={`${props.name}`}
-          className={styles.thumbnailRadioImage}
-          src={props.thumbnail}
-        />
+          <img
+            alt={`${props.name}`}
+            className={styles.thumbnailRadioImage}
+            src={props.thumbnail}
+            onError={e => setImageError(true)}
+          />
       </label>
     </>
   );
@@ -103,19 +112,12 @@ function AdminVideo() {
   useEffect(() => {
     // Set mounted to true so that we know when first mount has happened
     let mounted = true;
-
     if (mounted && !apiFetched) {
       fetchAPI()
     }
-
     // Set mounted to false when the component is unmounted
     return () => { mounted = false };
-  });
-
-  useEffect(() => {
-    // Hide the preview
-    setShowPreview(false);
-  }, [setShowPreview]);
+  }, [fetchAPI]);
 
   const handleOnChange = (e) => {
     setFormChanged(true);
@@ -146,7 +148,7 @@ function AdminVideo() {
 
     if (config.USE_MOCK_DATA && config.USE_MOCK_DATA === true) {
       putAPI(payload);
-    }else {
+    } else {
       const putVideoUrl = `${config.API_URL}/video/${id}`;
       fetch(putVideoUrl, {
         method: 'PUT',
@@ -194,7 +196,7 @@ function AdminVideo() {
             <h1 className="mg-b-3">Edit video details</h1>
             <fieldset >
               <label htmlFor="title">Video title</label>
-              <input className={styles.field}
+                <input className={styles.field}
                   type="text"
                   name="title"
                   id="title"
