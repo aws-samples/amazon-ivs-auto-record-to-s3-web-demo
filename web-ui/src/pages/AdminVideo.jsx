@@ -112,14 +112,12 @@ function AdminVideo() {
   useEffect(() => {
     // Set mounted to true so that we know when first mount has happened
     let mounted = true;
-
     if (mounted && !apiFetched) {
       fetchAPI()
     }
-
     // Set mounted to false when the component is unmounted
     return () => { mounted = false };
-  }, []);
+  }, [fetchAPI]);
 
   const handleOnChange = (e) => {
     setFormChanged(true);
@@ -198,7 +196,7 @@ function AdminVideo() {
             <h1 className="mg-b-3">Edit video details</h1>
             <fieldset >
               <label htmlFor="title">Video title</label>
-              <input className={styles.field}
+                <input className={styles.field}
                   type="text"
                   name="title"
                   id="title"
