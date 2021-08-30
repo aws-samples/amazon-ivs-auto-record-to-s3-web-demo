@@ -64,6 +64,7 @@ After the serverless installation is complete, follow the instructions in the **
 * Because of the distributed nature of Amazon CloudFront, you may get 403 or 404 errors if you try to use this application before CloudFront has completed its propagation to all EDGE locations. This may take up to a few hours.
 * The application was written for demonstration purposes and not for production use.
 * Currently only tested in the us-west-2 (Oregon) region. Additional regions may be supported depending on service availability.
+* Thumbnail selection in the admin panel is not working as expected.
 
 ## License
 This sample code is made available under a modified MIT license. See the LICENSE file.
