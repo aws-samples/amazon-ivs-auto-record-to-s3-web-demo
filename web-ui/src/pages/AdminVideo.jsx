@@ -26,6 +26,14 @@ function NotFoundError() {
 }
 
 function ThumbnailRadio(props) {
+
+  const [imgError, setImageError] = useState(false);
+
+  if(imgError) {
+    return (
+      <span></span>
+    )
+  }
   return (
     <>
       <input
@@ -38,11 +46,12 @@ function ThumbnailRadio(props) {
         onChange={props.onChange}
       />
       <label htmlFor={props.id}>
-        <img
-          alt={`${props.name}`}
-          className={styles.thumbnailRadioImage}
-          src={props.thumbnail}
-        />
+          <img
+            alt={`${props.name}`}
+            className={styles.thumbnailRadioImage}
+            src={props.thumbnail}
+            onError={e => setImageError(true)}
+          />
       </label>
     </>
   );
