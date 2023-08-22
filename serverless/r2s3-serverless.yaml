@@ -202,7 +202,7 @@ Resources:
           - "    return;\n"
           - '  };'
       Role: !GetAtt 'CheckLiveCronLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   CheckLiveCronLambdaRole:
     Properties:
@@ -429,7 +429,7 @@ Resources:
           - "    }\n"
           - '  };'
       Role: !GetAtt 'DeleteVideoLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   DeleteVideoLambdaRole:
     Properties:
@@ -608,7 +608,7 @@ Resources:
           - "  }\n"
           - "};\n"
       Policies: AmazonDynamoDBReadOnlyAccess
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   GetLiveDetails:
     Properties:
@@ -717,7 +717,7 @@ Resources:
           - "    }\n"
           - '  };'
       Role: !GetAtt 'GetLiveDetailsLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   GetLiveDetailsLambdaRole:
     Properties:
@@ -906,7 +906,7 @@ Resources:
       Policies:
         - DynamoDBReadPolicy
       Role: !GetAtt 'GetVideoLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   GetVideoLambdaRole:
     Properties:
@@ -1087,7 +1087,7 @@ Resources:
           - "    }\n"
           - '  };'
       Role: !GetAtt 'GetVideosLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   GetVideosLambdaRole:
     Properties:
@@ -1299,7 +1299,7 @@ Resources:
           - function msToTime(e){function n(e,n){return("00"+e).slice(-(n=n||2))}var
             r=e%1e3,i=(e=(e-r)/1e3)%60,t=(e=(e-i)/60)%60;return n((e-t)/60)+":"+n(t)+":"+n(i)+"."+n(r,3)}
       Role: !GetAtt 'IvsStreamingStateChangeLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   IVSStreamingStateChangeLambdaInvokePermission:
     Properties:
@@ -1490,7 +1490,7 @@ Resources:
           REGION: !Ref 'AWS::Region'
       Handler: index.handler
       Role: !GetAtt 'LoadChannelInfoLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Lambda::Function
   LoadChannelInfoLambdaRole:
     Properties:
@@ -1605,7 +1605,7 @@ Resources:
           - '  '
       Policies:
         - AmazonDynamoDBFullAccess
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   PutResetKey:
     Properties:
@@ -1778,7 +1778,7 @@ Resources:
           - "    }\n"
           - '  };'
       Role: !GetAtt 'ResetKeyLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   PutVideo:
     Properties:
@@ -1893,7 +1893,7 @@ Resources:
           - "  };\n"
           - '  '
       Role: !GetAtt 'PutVideoLambdaRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
     Type: AWS::Serverless::Function
   PutVideoLambdaRole:
     Properties:
