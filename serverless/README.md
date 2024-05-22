@@ -40,7 +40,13 @@ Execute the following command to deploy the serverless backend. Make sure to rep
 - Replace `<my-bucket-name>` with the name of the S3 bucket you created.
 
 ```console
-aws cloudformation deploy --s3-bucket <my-bucket-name> --template-file r2s3-serverless.yaml --stack-name IVS-R2S3 --parameter-overrides Title=<title> Subtitle=<subtitle> --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --region=<my-region>
+aws cloudformation deploy \
+   --s3-bucket <my-bucket-name> \
+   --template-file r2s3-serverless.yaml \
+   --stack-name IVS-R2S3 \
+   --parameter-overrides Title=<title> \ Subtitle=<subtitle> \
+   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+   --region=<my-region>
 ```
 
 ### 4. Take note of the stack outputs

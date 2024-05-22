@@ -241,27 +241,26 @@ Resources:
     Type: AWS::IAM::Role
   CloudFrontBucketPolicy:
     DependsOn:
-      - CloudFrontOriginAccessIdentity
+      - CloudFrontOriginAccessControl
     Properties:
       Bucket: !Ref 'IvsStorageBucket'
       PolicyDocument:
         Statement:
-          - Action:
-              - s3:GetObject
-            Effect: Allow
-            Principal:
-              AWS: !Sub
-                - arn:${AWS::Partition}:iam::cloudfront:user/CloudFront Origin Access
-                  Identity ${Identity}
-                - Identity: !Ref 'CloudFrontOriginAccessIdentity'
-            Resource:
-              - !Sub
-                - ${BucketArn}/*
-                - BucketArn: !GetAtt 'IvsStorageBucket.Arn'
+        - Action: s3:GetObject
+          Effect: Allow
+          Resource:
+            - !Sub
+              - ${BucketArn}/*
+              - BucketArn: !GetAtt 'IvsStorageBucket.Arn'
+          Principal:
+            Service: cloudfront.amazonaws.com
+          Condition:
+            StringEquals:
+              AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
     Type: AWS::S3::BucketPolicy
   CloudFrontDistribution:
     DependsOn:
-      - CloudFrontOriginAccessIdentity
+      - CloudFrontOriginAccessControl
     Properties:
       DistributionConfig:
         Comment: IVS Storage CloudFront Distribution
@@ -275,6 +274,7 @@ Resources:
               - Access-Control-Request-Headers
               - Access-Control-Request-Method
             QueryString: 'false'
+          ResponseHeadersPolicyId: eaab4381-ed33-4a86-88ca-d9558dc6cd63
           TargetOriginId: IVS Storage Origin
           ViewerProtocolPolicy: allow-all
         Enabled: 'true'
@@ -282,15 +282,18 @@ Resources:
           - DomainName: !GetAtt 'IvsStorageBucket.DomainName'
             Id: IVS Storage Origin
             S3OriginConfig:
-              OriginAccessIdentity: !Sub
-                - origin-access-identity/cloudfront/${OriginAccessId}
-                - OriginAccessId: !Ref 'CloudFrontOriginAccessIdentity'
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
     Type: AWS::CloudFront::Distribution
-  CloudFrontOriginAccessIdentity:
-    Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: CF Identity - IVS Storage Bucket
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties: 
+      OriginAccessControlConfig:
+        Description: R2S3 Demo Origin Access Control
+        Name: !Ref AWS::StackName
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
   CreateChannelLambdaRole:
     Properties:
       AssumeRolePolicyDocument:
@@ -1337,7 +1340,7 @@ Resources:
     Type: AWS::IVS::RecordingConfiguration
   IvsStorageBucket:
     DependsOn:
-      - CloudFrontOriginAccessIdentity
+      - CloudFrontOriginAccessControl
     Properties:
       CorsConfiguration:
         CorsRules:
