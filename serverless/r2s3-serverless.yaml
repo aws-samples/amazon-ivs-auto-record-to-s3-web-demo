@@ -279,7 +279,7 @@ Resources:
           ViewerProtocolPolicy: allow-all
         Enabled: 'true'
         Origins:
-          - DomainName: !GetAtt 'IvsStorageBucket.DomainName'
+          - DomainName: !GetAtt 'IvsStorageBucket.RegionalDomainName'
             Id: IVS Storage Origin
             S3OriginConfig:
               OriginAccessIdentity: ''
