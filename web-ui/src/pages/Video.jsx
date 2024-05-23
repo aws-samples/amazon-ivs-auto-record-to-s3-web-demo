@@ -27,7 +27,6 @@ function Video() {
   let { id } = useParams();
   const history = useHistory();
 
-  const [videoViews, setVideoViews] = useState(0);
   const [apiResponse, setApiResponse] = useState({});
   const [apiFetched, setApiFetched] = useState(false);
   const [apiError, setApiError] = useState();
@@ -36,7 +35,6 @@ function Video() {
     if (config.USE_MOCK_DATA && config.USE_MOCK_DATA === true){
       const API_RETURN = API.vods.find((vod) => vod.id === id);
       setApiResponse(API_RETURN);
-      setVideoViews(API_RETURN.views);
       setApiFetched(true);
       setApiError(null);
     } else {
@@ -44,13 +42,12 @@ function Video() {
       fetch(getVideoUrl)
         .then(response => response.json())
         .then((res) => {
+          if (res === null) throw new Error('Video not found');
           setApiResponse(res);
-          setVideoViews(res.views)
           setApiFetched(true);
           setApiError(null);
         })
         .catch((error) => {
-          console.error(error);
           setApiFetched(true);
           setApiError(error);
         });
@@ -69,37 +66,6 @@ function Video() {
     return () => { mounted = false };
   }, []);
 
-  function VideoMatched(props) {
-    return (
-      <>
-        <VideoPlayer
-          videoStream={props.playbackUrl}
-          controls={true}
-          muted={false}
-          onPlay={handleOnPlay}
-        />
-          <div className="fl pd-t-2">
-            <div className="fl fl-col fl-j-start fl-grow-1">
-              <h1 className={styles.h1}>{props.title}</h1>
-              <p className="color-alt">{props.subtitle}</p>
-            </div>
-            <div>
-              <button onClick={handleDelete}>Delete</button>
-            </div>
-          </div>
-        { props.views ? (
-          <div className="pd-t-2">
-            <p className="color-hint">{`${props.views} views • ${props.length}`}</p>
-          </div>
-        ): (
-          <>
-          </>
-        )}
-
-      </>
-    );
-  }
-
   const handleOnPlay = () => {
     // update number of views
     const putVideoUrl = `${config.API_URL}/video/${apiResponse.id}`;
@@ -114,9 +80,6 @@ function Video() {
       })
     })
     .then(response => response.json())
-    .then((res) => {
-      setVideoViews(res.Viewers)
-    })
     .catch((error) => {
       console.error(error);
     });
@@ -133,7 +96,6 @@ function Video() {
         method: 'DELETE',
         body: JSON.stringify()
       });
-      console.info(response.json());
       history.push('/');
     } catch (err) {
       console.error(err);
@@ -147,14 +109,32 @@ function Video() {
           <section className="pd-2 formatted-text">
             {apiError !== null ? 
               (<NotFoundError />) : 
-              (<VideoMatched
-                title={apiResponse.title}
-                playbackUrl={apiResponse.playbackUrl}
-                subtitle={apiResponse.subtitle}
-                views={videoViews}
-                length={FormatTimestamp(apiResponse.length)}
-                onPlay={handleOnPlay}
-              />)
+              (<>
+                <VideoPlayer
+                  videoStream={apiResponse.playbackUrl}
+                  controls={true}
+                  muted={false}
+                  onPlay={handleOnPlay}
+                />
+                  <div className="fl pd-t-2">
+                    <div className="fl fl-col fl-j-start fl-grow-1">
+                      <h1 className={styles.h1}>{apiResponse.title}</h1>
+                      <p className="color-alt">{apiResponse.subtitle}</p>
+                    </div>
+                    <div>
+                      <button onClick={handleDelete}>Delete</button>
+                    </div>
+                  </div>
+                { apiResponse.views ? (
+                  <div className="pd-t-2">
+                    <p className="color-hint">{`${apiResponse.views} views • ${FormatTimestamp(apiResponse.length)}`}</p>
+                  </div>
+                ): (
+                  <>
+                  </>
+                )}
+        
+              </>)
             }
           </section>
         )}
