@@ -65,6 +65,7 @@ After the serverless installation is complete, follow the instructions in the **
 * The application was written for demonstration purposes and not for production use.
 * Currently only tested in the us-west-2 (Oregon) region. Additional regions may be supported depending on service availability.
 * Thumbnail selection in the admin panel is not working as expected.
+* Deleting a vod in the UI does not delete the corresponding `m3u8` playlist files or thumbnails in the S3 bucket. To remove files, follow the instructions in the [Serverless README](./serverless/README.md#application-removal-and-cleanup).
 
 ## License
 This sample code is made available under a modified MIT license. See the LICENSE file.
