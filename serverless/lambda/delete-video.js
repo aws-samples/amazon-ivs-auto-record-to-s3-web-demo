@@ -47,24 +47,9 @@ exports.deleteRecordedVideo = async (event) => {
   
       console.info("deleteRecordedVideo > params:", params);
   
-      let dbResult = await ddb.getItem(params).promise();
+      let dbResult = await ddb.deleteItem(params).promise();
   
-      if ((!result.Item.RecordingConfiguration || !result.Item.RecordingConfiguration.S) || (!result.Item.RecordedFilename || !result.Items.RecordedFilename.S)) {
-        return response("No recording!", 500);
-      }
-  
-      const r2s3 = JSON.parse(result.Item.RecordingConfiguration.S);
-  
-      params = {
-        Bucket: r2s3.bucketName,
-        Key: result.Item.RecordedFilename.S
-      };
-      const s3Result = await S3.deleteObject(params).promise();
-  
-  
-      dbResult = await ddb.deleteItem(params).promise();
-  
-      return response({ dbResult, s3Result });
+      return response({ dbResult });
   
     } catch (err) {
   

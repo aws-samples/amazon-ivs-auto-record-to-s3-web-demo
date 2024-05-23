@@ -5,6 +5,7 @@ import "./VideoPlayer.css";
 
 class VideoPlayer extends Component {
   componentDidMount() {
+    if (this.player) return;
     this.initVideo();
   }
 
@@ -54,10 +55,12 @@ class VideoPlayer extends Component {
     this.player.ready(this.handlePlayerReady);
     // expose event for other components using it
     this.player.ready(this.props.onPlay);
-    
   }
 
   handlePlayerReady = () => {
+    const ivsPlayer = this.player.getIVSPlayer();
+    ivsPlayer.setLogLevel('ERROR'); // Set log level to WARN
+
     this.player.enableIVSQualityPlugin();
     this.player.src(this.props.videoStream);
     this.player.play();
