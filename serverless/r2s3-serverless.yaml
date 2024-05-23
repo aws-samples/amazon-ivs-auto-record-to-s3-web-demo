@@ -63,7 +63,7 @@ Resources:
   ApiGateway:
     Properties:
       Cors:
-        AllowMethods: '''GET,POST,PUT,OPTIONS'''
+        AllowMethods: '''GET,POST,PUT,OPTIONS,DELETE'''
         AllowOrigin: '''*'''
       StageName: !Ref 'StageName'
     Type: AWS::Serverless::Api
@@ -268,7 +268,11 @@ Resources:
           AllowedMethods:
             - GET
             - HEAD
+            - POST
+            - PUT
+            - PATCH
             - OPTIONS
+            - DELETE
           ForwardedValues:
             Headers:
               - Access-Control-Request-Headers
@@ -403,26 +407,9 @@ Resources:
           - "  \n"
           - "      console.info(\"deleteRecordedVideo > params:\", params);\n"
           - "  \n"
-          - "      let dbResult = await ddb.getItem(params).promise();\n"
+          - "      let dbResult = await ddb.deleteItem(params).promise();\n"
           - "  \n"
-          - "      if ((!result.Item.RecordingConfiguration || !result.Item.RecordingConfiguration.S)\
-            \ || (!result.Item.RecordedFilename || !result.Items.RecordedFilename.S))\
-            \ {\n"
-          - "        return response(\"No recording!\", 500);\n"
-          - "      }\n"
-          - "  \n"
-          - "      const r2s3 = JSON.parse(result.Item.RecordingConfiguration.S);\n"
-          - "  \n"
-          - "      params = {\n"
-          - "        Bucket: r2s3.bucketName,\n"
-          - "        Key: result.Item.RecordedFilename.S\n"
-          - "      };\n"
-          - "      const s3Result = await S3.deleteObject(params).promise();\n"
-          - "  \n"
-          - "  \n"
-          - "      dbResult = await ddb.deleteItem(params).promise();\n"
-          - "  \n"
-          - "      return response({ dbResult, s3Result });\n"
+          - "      return response({ dbResult });\n"
           - "  \n"
           - "    } catch (err) {\n"
           - "  \n"

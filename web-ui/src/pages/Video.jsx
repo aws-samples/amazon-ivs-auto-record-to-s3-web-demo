@@ -3,7 +3,7 @@ import VideoPlayer from "../components/VideoPlayer/VideoPlayer";
 import styles from "./Home.module.css";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 import FormatTimestamp from "../utility/FormatTimestamp";
 import API from "../get-video-api";
 
@@ -25,28 +25,31 @@ function NotFoundError() {
 
 function Video() {
   let { id } = useParams();
+  const history = useHistory();
 
-  const [videoViews, setVideoViews] = useState(0);
-  const [response, setResponse] = useState({});
+  const [apiResponse, setApiResponse] = useState({});
   const [apiFetched, setApiFetched] = useState(false);
+  const [apiError, setApiError] = useState();
 
   const fetchAPI = () => {
     if (config.USE_MOCK_DATA && config.USE_MOCK_DATA === true){
       const API_RETURN = API.vods.find((vod) => vod.id === id);
-      setResponse(API_RETURN);
-      setVideoViews(API_RETURN.views);
+      setApiResponse(API_RETURN);
       setApiFetched(true);
+      setApiError(null);
     } else {
       const getVideoUrl = `${config.API_URL}/video/${id}`;
       fetch(getVideoUrl)
         .then(response => response.json())
         .then((res) => {
-          setResponse(res);
-          setVideoViews(res.views)
+          if (res === null) throw new Error('Video not found');
+          setApiResponse(res);
           setApiFetched(true);
+          setApiError(null);
         })
         .catch((error) => {
-          console.error(error);
+          setApiFetched(true);
+          setApiError(error);
         });
     }
   }
@@ -61,73 +64,80 @@ function Video() {
 
     // Set mounted to false when the component is unmounted
     return () => { mounted = false };
-  });
-
-  function VideoMatched(props) {
-    return (
-      <>
-        <VideoPlayer
-          videoStream={props.playbackUrl}
-          controls={true}
-          muted={false}
-          onPlay={handleOnPlay}
-        />
-          <div className="pd-t-2">
-            <h1 className={styles.h1}>{props.title}</h1>
-            <p className="mg-t-1 color-alt">{props.subtitle}</p>
-          </div>
-        { props.views ? (
-          <div className="pd-t-2">
-            <p className="color-hint">{`${props.views} views • ${props.length}`}</p>
-          </div>
-        ): (
-          <>
-          </>
-        )}
-
-      </>
-    );
-  }
+  }, []);
 
   const handleOnPlay = () => {
     // update number of views
-    const putVideoUrl = `${config.API_URL}/video/${response.id}`;
-    const currentViews = parseInt(response.views, 10);
+    const putVideoUrl = `${config.API_URL}/video/${apiResponse.id}`;
+    const currentViews = parseInt(apiResponse.views, 10);
 
     fetch(putVideoUrl, {
       method: 'PUT',
       body: JSON.stringify({
-        title: response.title,
-        subtitle: response.subtitle,
+        title: apiResponse.title,
+        subtitle: apiResponse.subtitle,
         viewers: currentViews + 1
       })
     })
     .then(response => response.json())
-    .then((res) => {
-      setVideoViews(res.Viewers)
-    })
     .catch((error) => {
       console.error(error);
     });
   }
 
+  const handleDelete = async () => {
+    const confirmation = window.confirm("Do you really want to delete this video?");
+    if (!confirmation) return;
+
+    const deleteVideoUrl = `${config.API_URL}/video/${apiResponse.id}`;
+
+    try {
+      const response = await fetch(deleteVideoUrl, {
+        method: 'DELETE',
+        body: JSON.stringify()
+      });
+      history.push('/');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <>
       <Navbar />
-      <section className="pd-2 formatted-text">
-        {response ? (
-          <VideoMatched
-            title={response.title}
-            playbackUrl={response.playbackUrl}
-            subtitle={response.subtitle}
-            views={videoViews}
-            length={FormatTimestamp(response.length)}
-            onPlay={handleOnPlay}
-          />
-        ) : (
-          <NotFoundError />
+        {apiFetched && (
+          <section className="pd-2 formatted-text">
+            {apiError !== null ? 
+              (<NotFoundError />) : 
+              (<>
+                <VideoPlayer
+                  videoStream={apiResponse.playbackUrl}
+                  controls={true}
+                  muted={false}
+                  onPlay={handleOnPlay}
+                />
+                  <div className="fl pd-t-2">
+                    <div className="fl fl-col fl-j-start fl-grow-1">
+                      <h1 className={styles.h1}>{apiResponse.title}</h1>
+                      <p className="color-alt">{apiResponse.subtitle}</p>
+                    </div>
+                    <div>
+                      <button onClick={handleDelete}>Delete</button>
+                    </div>
+                  </div>
+                { apiResponse.views ? (
+                  <div className="pd-t-2">
+                    <p className="color-hint">{`${apiResponse.views} views • ${FormatTimestamp(apiResponse.length)}`}</p>
+                  </div>
+                ): (
+                  <>
+                  </>
+                )}
+        
+              </>)
+            }
+          </section>
         )}
-      </section>
     </>
   );
 }
